@@ -121,17 +121,17 @@ export class ChallengeService {
     const supabase = this.db.getClient();
 
     const text = `
-    P1: {1}, o capital mais importante é o P2: {2}. São pessoas de várias culturas, tradições, formações, naturezas e educações convivendo e vivendo juntas. A P3: {3}, portanto, é fundamental para o relacionamento e o desenvolvimento das atividades. Nesse cenário, então, devemos respeitar as diferenças existentes, já que muitas vezes passamos mais tempo com nossos colegas de trabalho do que com nossos P4: {4}.
-    É muito comum, também, encontrarmos P5: {5} que fazem o funcionário ser menos produtivo por se preocupar mais com o outro do que com o seu P6: {6}. Em relação à segurança e meio ambiente é de suma importância que, além do respeito das normas e padrões da empresa, saibamos respeitar o P7: {7}.
+    The term "moral harassment" is often used to describe a type of {1}. Moral harassment is a form of {2} that is not specifically protected under the law, but can still be actionable if it rises to the level of creating a hostile {3}.
+    Moral harassment can take many forms, but generally includes any type of {4} that is intended to humiliate, intimidate, or otherwise cause {5}. Examples of moral harassment may include {6} about someone's appearance or personal life, spreading rumors, or singling someone out for unfair {7}.
     `;
     const placeholders = [
-      { word: 'p3', position: 3 },
-      { word: 'p4', position: 4 },
-      { word: 'p2', position: 2 },
-      { word: 'p5', position: 5 },
-      { word: 'p7', position: 7 },
-      { word: 'p1', position: 1 },
-      { word: 'p6', position: 6 },
+      { word: 'work environment', position: 3 },
+      { word: 'behavior', position: 4 },
+      { word: 'workplace harassment', position: 2 },
+      { word: 'emotional distress', position: 5 },
+      { word: 'criticism', position: 7 },
+      { word: 'workplace bullying', position: 1 },
+      { word: 'making derogatory comments', position: 6 },
     ];
 
     const { data: challenge } = await supabase
