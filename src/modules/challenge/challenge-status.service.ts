@@ -3,7 +3,7 @@ import { Cache } from 'cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 
 type Filled = {
-  word: number;
+  wordPosition: number;
   position: number;
 };
 
@@ -49,8 +49,14 @@ export class ChallengeStatusService {
     challengeId: string,
     position: number,
   ): Promise<void> {
-    const currentFilled = await this.#getFilled(challengeId);
     const key = this.#getFilledKey(challengeId);
+    const currentFilled = await this.#getFilled(challengeId);
+
+    const wordPosition = currentFilled.find(
+      (c) => c.position === position,
+    ).wordPosition;
+    await this.removeLock(challengeId, wordPosition);
+
     await this.cacheManager.set(
       key,
       currentFilled.filter((f) => f.position !== position),

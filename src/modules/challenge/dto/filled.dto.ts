@@ -1,4 +1,4 @@
 export class FilledDto {
-  word: number;
+  wordPosition: number;
   position: number;
 }

@@ -12,7 +12,7 @@ import { ChallengeStatusService } from '@/modules/challenge/challenge-status.ser
 type EventPayload = {
   challengeId: string;
   participantId: string;
-  word: number;
+  wordPosition: number;
   position: number;
 };
 
@@ -49,9 +49,9 @@ export class EventGateway {
 
   @SubscribeMessage('drag:start')
   public async handleEventOnDragStart(
-    @MessageBody() { challengeId, participantId, word }: EventPayload,
+    @MessageBody() { challengeId, participantId, wordPosition }: EventPayload,
   ): Promise<void> {
-    await this.challengeStatusService.addLock(challengeId, word);
+    await this.challengeStatusService.addLock(challengeId, wordPosition);
     const payload = await this.challengeStatusService.getSnapshot(challengeId);
     this.emitChallengeEvent(challengeId, 'DRAG_START', {
       ...payload,
@@ -61,9 +61,9 @@ export class EventGateway {
 
   @SubscribeMessage('drag:cancel')
   public async handleEventOnDragCancel(
-    @MessageBody() { challengeId, participantId, word }: EventPayload,
+    @MessageBody() { challengeId, participantId, wordPosition }: EventPayload,
   ): Promise<void> {
-    await this.challengeStatusService.removeLock(challengeId, word);
+    await this.challengeStatusService.removeLock(challengeId, wordPosition);
     const payload = await this.challengeStatusService.getSnapshot(challengeId);
     this.emitChallengeEvent(challengeId, 'DRAG_CANCEL', {
       ...payload,
@@ -78,10 +78,11 @@ export class EventGateway {
 
   @SubscribeMessage('drag:end')
   public async handleEventOnDragEnd(
-    @MessageBody() { challengeId, participantId, word, position }: EventPayload,
+    @MessageBody()
+    { challengeId, participantId, wordPosition, position }: EventPayload,
   ): Promise<void> {
     await this.challengeStatusService.addFilled(challengeId, {
-      word,
+      wordPosition,
       position,
     });
     const payload = await this.challengeStatusService.getSnapshot(challengeId);
