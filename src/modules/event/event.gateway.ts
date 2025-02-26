@@ -54,7 +54,7 @@ export class EventGateway {
     @MessageBody() { challengeId, participantId, wordPosition }: EventPayload,
   ): Promise<void> {
     await this.challengeStatusService.addLock(challengeId, wordPosition);
-    await this.#emitSnapshot(challengeId, participantId, 'DRAG_START');
+    await this.#emitSnapshot('DRAG_START', { challengeId, participantId });
   }
 
   @SubscribeMessage('drag:cancel')
@@ -62,11 +62,18 @@ export class EventGateway {
     @MessageBody() { challengeId, participantId, wordPosition }: EventPayload,
   ): Promise<void> {
     await this.challengeStatusService.removeLock(challengeId, wordPosition);
-    await this.#emitSnapshot(challengeId, participantId, 'DRAG_CANCEL');
+    await this.#emitSnapshot('DRAG_CANCEL', {
+      challengeId,
+      participantId,
+      wordPosition,
+    });
   }
 
   @SubscribeMessage('drag:move')
-  public handleEventOnDragMove(@MessageBody() data: EventPayload): void {
+  public handleEventOnDragMove(
+    @MessageBody()
+    data: Omit<EventPayload, 'position'> & { delta: { x: number; y: number } },
+  ): void {
     this.emitChallengeEvent(data.challengeId, 'DRAG_MOVE', data);
   }
 
@@ -79,7 +86,11 @@ export class EventGateway {
       wordPosition,
       position,
     });
-    await this.#emitSnapshot(challengeId, participantId, 'DRAG_END');
+    await this.#emitSnapshot('DRAG_END', {
+      challengeId,
+      participantId,
+      wordPosition,
+    });
   }
 
   @SubscribeMessage('remove:item')
@@ -87,7 +98,7 @@ export class EventGateway {
     @MessageBody() { challengeId, position, participantId }: EventPayload,
   ): Promise<void> {
     await this.challengeStatusService.removeFilled(challengeId, position);
-    await this.#emitSnapshot(challengeId, participantId, 'REMOVE_ITEM');
+    await this.#emitSnapshot('REMOVE_ITEM', { challengeId, participantId });
   }
 
   @SubscribeMessage('submit')
@@ -99,18 +110,22 @@ export class EventGateway {
     }: Pick<EventPayload, 'challengeId' | 'participantId'>,
   ): Promise<void> {
     await this.challengeStatusService.submit(challengeId);
-    await this.#emitSnapshot(challengeId, participantId, 'CHALLENGE_END');
+    await this.#emitSnapshot('CHALLENGE_END', { challengeId, participantId });
   }
 
   async #emitSnapshot(
-    challengeId: string,
-    participantId: string,
     event: EventType,
+    {
+      participantId,
+      challengeId,
+      wordPosition,
+    }: { challengeId: string; participantId: string; wordPosition?: number },
   ): Promise<void> {
     const payload = await this.challengeStatusService.getSnapshot(challengeId);
     this.emitChallengeEvent(challengeId, event, {
       ...payload,
       participantId,
+      wordPosition,
     });
   }
 }
