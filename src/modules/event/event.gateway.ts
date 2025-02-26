@@ -7,9 +7,13 @@ import {
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 
+import { ChallengeStatusService } from '@/modules/challenge/challenge-status.service';
+
 type EventPayload = {
   challengeId: string;
   participantId: string;
+  word: number;
+  position: number;
 };
 
 @WebSocketGateway({
@@ -22,6 +26,10 @@ type EventPayload = {
 })
 @Injectable()
 export class EventGateway {
+  constructor(
+    private readonly challengeStatusService: ChallengeStatusService,
+  ) {}
+
   @WebSocketServer() websocket: Server;
 
   public emitChallengeEvent(
@@ -40,13 +48,27 @@ export class EventGateway {
   }
 
   @SubscribeMessage('drag:start')
-  public handleEventOnDragStart(@MessageBody() data: EventPayload): void {
-    this.emitChallengeEvent(data.challengeId, 'DRAG_START', data);
+  public async handleEventOnDragStart(
+    @MessageBody() { challengeId, participantId, word }: EventPayload,
+  ): Promise<void> {
+    await this.challengeStatusService.addLock(challengeId, word);
+    const payload = await this.challengeStatusService.getSnapshot(challengeId);
+    this.emitChallengeEvent(challengeId, 'DRAG_START', {
+      ...payload,
+      participantId,
+    });
   }
 
   @SubscribeMessage('drag:cancel')
-  public handleEventOnDragCancel(@MessageBody() data: EventPayload): void {
-    this.emitChallengeEvent(data.challengeId, 'DRAG_CANCEL', data);
+  public async handleEventOnDragCancel(
+    @MessageBody() { challengeId, participantId, word }: EventPayload,
+  ): Promise<void> {
+    await this.challengeStatusService.removeLock(challengeId, word);
+    const payload = await this.challengeStatusService.getSnapshot(challengeId);
+    this.emitChallengeEvent(challengeId, 'DRAG_CANCEL', {
+      ...payload,
+      participantId,
+    });
   }
 
   @SubscribeMessage('drag:move')
@@ -55,12 +77,29 @@ export class EventGateway {
   }
 
   @SubscribeMessage('drag:end')
-  public handleEventOnDragEnd(@MessageBody() data: EventPayload): void {
-    this.emitChallengeEvent(data.challengeId, 'DRAG_END', data);
+  public async handleEventOnDragEnd(
+    @MessageBody() { challengeId, participantId, word, position }: EventPayload,
+  ): Promise<void> {
+    await this.challengeStatusService.addFilled(challengeId, {
+      word,
+      position,
+    });
+    const payload = await this.challengeStatusService.getSnapshot(challengeId);
+    this.emitChallengeEvent(challengeId, 'DRAG_END', {
+      ...payload,
+      participantId,
+    });
   }
 
   @SubscribeMessage('remove:item')
-  public handleEventOnRemoveItem(@MessageBody() data: EventPayload): void {
-    this.emitChallengeEvent(data.challengeId, 'REMOVE_ITEM', data);
+  public async handleEventOnRemoveItem(
+    @MessageBody() { challengeId, position, participantId }: EventPayload,
+  ): Promise<void> {
+    await this.challengeStatusService.removeFilled(challengeId, position);
+    const payload = await this.challengeStatusService.getSnapshot(challengeId);
+    this.emitChallengeEvent(challengeId, 'REMOVE_ITEM', {
+      ...payload,
+      participantId,
+    });
   }
 }

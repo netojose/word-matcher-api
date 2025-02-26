@@ -1,4 +1,5 @@
 import { Tables } from '@/database.types';
+import { SnapshotDto } from './snapshot.dto';
 
 export class ChallengeDto {
   name: Tables<'challenges'>['name'];
@@ -13,4 +14,5 @@ export class ChallengeDetailDto {
   name: Tables<'challengeParticipants'>['name'];
   team: Tables<'challengeParticipants'>['team'];
   challenges: ChallengeDto;
+  snapshot: SnapshotDto;
 }
