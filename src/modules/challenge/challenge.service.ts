@@ -107,7 +107,10 @@ export class ChallengeService {
       .select('*', { count: 'exact', head: true })
       .eq('challengeId', challengeId);
 
-    if (count >= challenge.teamsAmount * challenge.participantsPerTeam) {
+    const totalParticipants =
+      challenge.teamsAmount * challenge.participantsPerTeam;
+
+    if (count >= totalParticipants) {
       await this.startChallenge(challengeId);
     }
 
@@ -117,8 +120,19 @@ export class ChallengeService {
   public async startChallenge(challengeId: string): Promise<void> {
     const supabase = this.db.getClient();
 
-    const text = 'Some long text here';
-    const placeholders = { foo: 'bar' };
+    const text = `
+    P1: {1}, o capital mais importante é o P2: {2}. São pessoas de várias culturas, tradições, formações, naturezas e educações convivendo e vivendo juntas. A P3: {3}, portanto, é fundamental para o relacionamento e o desenvolvimento das atividades. Nesse cenário, então, devemos respeitar as diferenças existentes, já que muitas vezes passamos mais tempo com nossos colegas de trabalho do que com nossos P4: {4}.
+    É muito comum, também, encontrarmos P5: {5} que fazem o funcionário ser menos produtivo por se preocupar mais com o outro do que com o seu P6: {6}. Em relação à segurança e meio ambiente é de suma importância que, além do respeito das normas e padrões da empresa, saibamos respeitar o P7: {7}.
+    `;
+    const placeholders = [
+      { word: 'p3', position: 3 },
+      { word: 'p4', position: 4 },
+      { word: 'p2', position: 2 },
+      { word: 'p5', position: 5 },
+      { word: 'p7', position: 7 },
+      { word: 'p1', position: 1 },
+      { word: 'p6', position: 6 },
+    ];
 
     const { data: challenge } = await supabase
       .from('challenges')
@@ -127,6 +141,10 @@ export class ChallengeService {
       .select()
       .single();
 
-    this.eventGateway.emitStartChallenge(challenge);
+    this.eventGateway.emitChallengeEvent(
+      challengeId,
+      'CHALLENGE_START',
+      challenge,
+    );
   }
 }

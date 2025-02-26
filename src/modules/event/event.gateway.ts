@@ -1,13 +1,16 @@
-import { Tables } from '@/database.types';
 import { Injectable } from '@nestjs/common';
 import {
-  ConnectedSocket,
   MessageBody,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import { Server } from 'socket.io';
+
+type EventPayload = {
+  challengeId: string;
+  participantId: string;
+};
 
 @WebSocketGateway({
   cors: {
@@ -21,35 +24,43 @@ import { Server, Socket } from 'socket.io';
 export class EventGateway {
   @WebSocketServer() websocket: Server;
 
-  public emitStartChallenge(challenge: Tables<'challenges'>) {
-    const channel = `start-challenge:${challenge.id}`;
-    this.websocket.emit(channel, challenge);
+  public emitChallengeEvent(
+    challengeId: string,
+    event:
+      | 'CHALLENGE_START'
+      | 'DRAG_START'
+      | 'DRAG_MOVE'
+      | 'DRAG_CANCEL'
+      | 'DRAG_END'
+      | 'REMOVE_ITEM'
+      | 'CHALLENGE_END',
+    payload: unknown,
+  ) {
+    this.websocket.emit(`challenge:${challengeId}`, { event, payload });
   }
 
-  @SubscribeMessage('onStartDrag')
-  public handleEventOnStartDrag(
-    @MessageBody() data: string,
-    @ConnectedSocket() client: Socket,
-  ): string {
-    console.log(client);
-    return data;
+  @SubscribeMessage('drag:start')
+  public handleEventOnDragStart(@MessageBody() data: EventPayload): void {
+    this.emitChallengeEvent(data.challengeId, 'DRAG_START', data);
   }
 
-  @SubscribeMessage('onDrag')
-  public handleEventOnDrag(
-    @MessageBody() data: string,
-    @ConnectedSocket() client: Socket,
-  ): string {
-    console.log(client);
-    return data;
+  @SubscribeMessage('drag:cancel')
+  public handleEventOnDragCancel(@MessageBody() data: EventPayload): void {
+    this.emitChallengeEvent(data.challengeId, 'DRAG_CANCEL', data);
   }
 
-  @SubscribeMessage('onStopDrag')
-  public handleEventOnStopDrag(
-    @MessageBody() data: string,
-    @ConnectedSocket() client: Socket,
-  ): string {
-    console.log(client);
-    return data;
+  @SubscribeMessage('drag:move')
+  public handleEventOnDragMove(@MessageBody() data: EventPayload): void {
+    this.emitChallengeEvent(data.challengeId, 'DRAG_MOVE', data);
+  }
+
+  @SubscribeMessage('drag:end')
+  public handleEventOnDragEnd(@MessageBody() data: EventPayload): void {
+    this.emitChallengeEvent(data.challengeId, 'DRAG_END', data);
+  }
+
+  @SubscribeMessage('remove:item')
+  public handleEventOnRemoveItem(@MessageBody() data: EventPayload): void {
+    this.emitChallengeEvent(data.challengeId, 'REMOVE_ITEM', data);
   }
 }
