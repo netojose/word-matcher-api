@@ -16,6 +16,15 @@ type EventPayload = {
   position: number;
 };
 
+type EventType =
+  | 'CHALLENGE_START'
+  | 'DRAG_START'
+  | 'DRAG_MOVE'
+  | 'DRAG_CANCEL'
+  | 'DRAG_END'
+  | 'REMOVE_ITEM'
+  | 'CHALLENGE_END';
+
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -34,14 +43,7 @@ export class EventGateway {
 
   public emitChallengeEvent(
     challengeId: string,
-    event:
-      | 'CHALLENGE_START'
-      | 'DRAG_START'
-      | 'DRAG_MOVE'
-      | 'DRAG_CANCEL'
-      | 'DRAG_END'
-      | 'REMOVE_ITEM'
-      | 'CHALLENGE_END',
+    event: EventType,
     payload: unknown,
   ) {
     this.websocket.emit(`challenge:${challengeId}`, { event, payload });
@@ -52,11 +54,7 @@ export class EventGateway {
     @MessageBody() { challengeId, participantId, wordPosition }: EventPayload,
   ): Promise<void> {
     await this.challengeStatusService.addLock(challengeId, wordPosition);
-    const payload = await this.challengeStatusService.getSnapshot(challengeId);
-    this.emitChallengeEvent(challengeId, 'DRAG_START', {
-      ...payload,
-      participantId,
-    });
+    await this.#emitSnapshot(challengeId, participantId, 'DRAG_START');
   }
 
   @SubscribeMessage('drag:cancel')
@@ -64,11 +62,7 @@ export class EventGateway {
     @MessageBody() { challengeId, participantId, wordPosition }: EventPayload,
   ): Promise<void> {
     await this.challengeStatusService.removeLock(challengeId, wordPosition);
-    const payload = await this.challengeStatusService.getSnapshot(challengeId);
-    this.emitChallengeEvent(challengeId, 'DRAG_CANCEL', {
-      ...payload,
-      participantId,
-    });
+    await this.#emitSnapshot(challengeId, participantId, 'DRAG_CANCEL');
   }
 
   @SubscribeMessage('drag:move')
@@ -85,11 +79,7 @@ export class EventGateway {
       wordPosition,
       position,
     });
-    const payload = await this.challengeStatusService.getSnapshot(challengeId);
-    this.emitChallengeEvent(challengeId, 'DRAG_END', {
-      ...payload,
-      participantId,
-    });
+    await this.#emitSnapshot(challengeId, participantId, 'DRAG_END');
   }
 
   @SubscribeMessage('remove:item')
@@ -97,8 +87,28 @@ export class EventGateway {
     @MessageBody() { challengeId, position, participantId }: EventPayload,
   ): Promise<void> {
     await this.challengeStatusService.removeFilled(challengeId, position);
+    await this.#emitSnapshot(challengeId, participantId, 'REMOVE_ITEM');
+  }
+
+  @SubscribeMessage('submit')
+  public async handleEventOnSubmit(
+    @MessageBody()
+    {
+      challengeId,
+      participantId,
+    }: Pick<EventPayload, 'challengeId' | 'participantId'>,
+  ): Promise<void> {
+    await this.challengeStatusService.submit(challengeId);
+    await this.#emitSnapshot(challengeId, participantId, 'CHALLENGE_END');
+  }
+
+  async #emitSnapshot(
+    challengeId: string,
+    participantId: string,
+    event: EventType,
+  ): Promise<void> {
     const payload = await this.challengeStatusService.getSnapshot(challengeId);
-    this.emitChallengeEvent(challengeId, 'REMOVE_ITEM', {
+    this.emitChallengeEvent(challengeId, event, {
       ...payload,
       participantId,
     });

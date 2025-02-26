@@ -10,6 +10,7 @@ type Filled = {
 type ChallengeSnapshot = {
   locks: Array<number>;
   filled: Array<Filled>;
+  submitted: boolean;
 };
 
 @Injectable()
@@ -19,8 +20,9 @@ export class ChallengeStatusService {
   public async getSnapshot(challengeId: string): Promise<ChallengeSnapshot> {
     const locks = await this.#getLocks(challengeId);
     const filled = await this.#getFilled(challengeId);
+    const submitted = await this.#getSubmitted(challengeId);
 
-    return { locks, filled };
+    return { locks, filled, submitted };
   }
 
   public async addLock(challengeId: string, word: number): Promise<void> {
@@ -63,12 +65,19 @@ export class ChallengeStatusService {
     );
   }
 
+  public async submit(challengeId: string): Promise<void> {
+    const key = this.#getSubmittedKey(challengeId);
+    await this.cacheManager.set(key, true);
+  }
+
   public async deleteChallenge(challengeId: string): Promise<void> {
     const lockKey = this.#getLockKey(challengeId);
     const filledKey = this.#getFilledKey(challengeId);
+    const submittedKey = this.#getSubmittedKey(challengeId);
 
     await this.cacheManager.del(lockKey);
     await this.cacheManager.del(filledKey);
+    await this.cacheManager.del(submittedKey);
   }
 
   #getLockKey(challengeId: string): string {
@@ -77,6 +86,10 @@ export class ChallengeStatusService {
 
   #getFilledKey(challengeId: string): string {
     return `challenge-filled:${challengeId}`;
+  }
+
+  #getSubmittedKey(challengeId: string): string {
+    return `challenge-submitted:${challengeId}`;
   }
 
   async #getLocks(challengeId: string): Promise<number[]> {
@@ -89,5 +102,11 @@ export class ChallengeStatusService {
     const filledKey = this.#getFilledKey(challengeId);
     const cachedFilled = await this.cacheManager.get<Filled[]>(filledKey);
     return cachedFilled ?? [];
+  }
+
+  async #getSubmitted(challengeId: string): Promise<boolean> {
+    const key = this.#getSubmittedKey(challengeId);
+    const cachedSubmitted = await this.cacheManager.get<boolean>(key);
+    return cachedSubmitted ?? false;
   }
 }
